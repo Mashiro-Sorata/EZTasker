@@ -1,5 +1,5 @@
 {
-    "ABOUT": "TEST",
+    "ABOUT": [(300，200),"TEST"],
     "AUTORUN": false,
     "DICON": "",
     "LANG": "CN",
@@ -7,6 +7,6 @@
     "LOGFILE": "run.log",
     "METHOD": "THREADING",
     "SICON": "",
-    "SOFTWARE": "loop.py",
+    "SOFTWARE": "nonloop.py",
     "TITLE": "TEST"
 }

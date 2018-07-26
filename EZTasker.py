@@ -16,6 +16,9 @@ from wx.lib.embeddedimage import PyEmbeddedImage
 
 
 
+VERSION = 'Beta v1.0.0'
+
+ABOUT_SIZE = (300, 200)
 ErrLogFile = 'Error.log'
 
 MainErrLogFile = 'MainErrors.log'
@@ -55,7 +58,7 @@ class Configuration:
     DCFG = {'SICON': '',     # The path of "static" state icon
             'DICON': '',     # The path of "dynamic" state icon
             'TITLE': 'EZTasker',   # The text displayed on the icon
-            'ABOUT': '<h1><a href="https://github.com/Mashiro-Sorata/EZTasker">Help Here</a></h1>',   # About text
+            'ABOUT': [ABOUT_SIZE, '<div align="center"><h2>EZTasker</h2></div><ul><li>Author: <a href="https://github.com/Mashiro-Sorata">Mashiro_Sorata</a></li><li><a href="https://github.com/Mashiro-Sorata/EZTasker">Help</a></li><li>Version: %s</li></ul>' % VERSION],   # About text
             'SOFTWARE': '',     # The path of the script or exe-file
             'METHOD': 'THREADING',    # 'THREADING' for script, 'PROCESS' for executable file
             'AUTORUN': False,   # Whether the script or exe-file runs automatically when EZTasker starts.
@@ -294,9 +297,19 @@ class AboutFrame(wx.Dialog):
 </html>'''
 
     def __init__(self, parent, title, about):
-        wx.Dialog.__init__(self, parent, -1, title, size=(440, 400))
+        if isinstance(about, str):
+            wx.Dialog.__init__(self, parent, -1, title, size=ABOUT_SIZE)
+            t = self.ABOUT % about
+        elif isinstance(about, list):
+            try:
+                wx.Dialog.__init__(self, parent, -1, title, size=tuple(about[0]))
+                t = self.ABOUT % about[1]
+            except Exception as e:
+                wx.MessageBox(str(e), 'ConfigError', wx.OK | wx.ICON_ERROR)
+        else:
+            wx.MessageBox(str(e), 'ConfigError', wx.OK | wx.ICON_ERROR)
         self.html = wx.html.HtmlWindow(self)
-        t = self.ABOUT % about
+        
         self.html.SetPage(t)
         button = wx.Button(self, wx.ID_OK, "OK")
 
@@ -306,7 +319,8 @@ class AboutFrame(wx.Dialog):
 
         self.html.Bind(wx.html.EVT_HTML_LINK_CLICKED,self.OnLinkClicked)  
 
-        self.SetSizer(sizer)  
+        self.SetSizer(sizer)
+        self.Centre()
         self.Layout()
 
     def OnLinkClicked(self, linkinfo):  
