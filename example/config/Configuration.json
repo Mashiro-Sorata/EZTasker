@@ -1,0 +1,12 @@
+{
+    "ABOUT": "TEST",
+    "AUTORUN": false,
+    "DICON": "",
+    "LANG": "CN",
+    "LOG": true,
+    "LOGFILE": "run.log",
+    "METHOD": "THREADING",
+    "SICON": "",
+    "SOFTWARE": "loop.py",
+    "TITLE": "TEST"
+}
