@@ -5,10 +5,10 @@ import webbrowser
 import os
 import json
 import threading
+import shlex
+import subprocess
 import win32process
 import win32event
-import inspect
-import ctypes
 import sys
 import traceback
 import time
@@ -16,40 +16,13 @@ from wx.lib.embeddedimage import PyEmbeddedImage
 
 
 
-VERSION = 'Beta v1.0.0'
+VERSION = 'Beta v1.1.0'
 
 ABOUT_SIZE = (300, 200)
 ErrLogFile = 'Error.log'
 
 MainErrLogFile = 'MainErrors.log'
 
-
-def _async_raise(tid, exctype):
-    """raises the exception, performs cleanup if needed"""
-    tid = ctypes.c_long(tid)
-    if not inspect.isclass(exctype):
-        exctype = type(exctype)
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
-    if res == 0:
-        raise ValueError("invalid thread id")
-    elif res != 1:
-        # """if it returns a number greater than one, you're in trouble,
-        # and you should call it again with exc=NULL to revert the effect"""
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
-        raise SystemError("PyThreadState_SetAsyncExc failed")
- 
-def stop_thread(thread):
-    _async_raise(thread.ident, SystemExit)
-
-def pyexec(code, fexec=None, *args):
-    try:
-        exec(code)
-    except Exception as e:
-        wx.MessageBox(str(e), args[1], wx.OK | wx.ICON_ERROR)
-        with open(ErrLogFile, 'w') as f:
-            f.write(traceback.format_exc())
-    if fexec is not None:
-        fexec(args[0])
 
 class Configuration:
     CFG_PATH = os.path.join(os.getcwd(), 'config')
@@ -58,17 +31,23 @@ class Configuration:
     DCFG = {'SICON': '',     # The path of "static" state icon
             'DICON': '',     # The path of "dynamic" state icon
             'TITLE': 'EZTasker',   # The text displayed on the icon
-            'ABOUT': [ABOUT_SIZE, '<div align="center"><h2>EZTasker</h2></div><ul><li>Author: <a href="https://github.com/Mashiro-Sorata">Mashiro_Sorata</a></li><li><a href="https://github.com/Mashiro-Sorata/EZTasker">Help</a></li><li>Version: %s</li></ul>' % VERSION],   # About text
+            'ABOUT': {'SIZE': ABOUT_SIZE,
+                      'HTML': '<div align="center"><h2>EZTasker</h2></div><ul><li>Author: <a href="https://github.com/Mashiro-Sorata">Mashiro_Sorata</a></li><li><a href="https://github.com/Mashiro-Sorata/EZTasker">Help</a></li><li>Version: %s</li></ul>' % VERSION},   # About text
             'SOFTWARE': '',     # The path of the script or exe-file
             'METHOD': 'THREADING',    # 'THREADING' for script, 'PROCESS' for executable file
             'AUTORUN': False,   # Whether the script or exe-file runs automatically when EZTasker starts.
             'LOG': False,       # Log switch
             'LOGFILE': '',      # The path file logged
-            'LANG': 'CN'}       # Language: 'CN' or 'EN'
+            'LANG': 'CN',       # Language: 'CN' or 'EN'
+            'PYTHON': 'python'  # The path of python
+            }
 
     def __init__(self):
-        self.DCFG = self.loadconfig()
-        self.mkdir()
+        if not self.mkdir():
+            self.DCFG = self.loadconfig()
+            self.__cfg_check()
+            
+        
 
     def mkdir(self):
         if not os.path.exists(self.FILE):
@@ -82,8 +61,8 @@ class Configuration:
             if dlg.ShowModal() == wx.ID_YES:
                 os.startfile(self.FILE)
             wx.Exit()
-                
-            
+            return True
+        return False
 
     def loadconfig(self):
         try:
@@ -100,6 +79,25 @@ class Configuration:
 
     def get(self, key):
         return self.DCFG[key]
+
+    def __cfg_check(self):
+        for each in ('SICON', 'DICON', 'SOFTWARE', 'LOGFILE'):
+            if self.DCFG[each] != '' and not os.path.isfile(self.DCFG[each]):
+                wx.MessageBox('Invalid value of %s: %s' % (each, self.DCFG[each]), 'Error', wx.OK | wx.ICON_ERROR)
+                wx.Exit()
+
+        if self.DCFG['PYTHON'] not in ('python', 'py') and not os.path.isfile(self.DCFG['PYTHON']):
+            wx.MessageBox('Invalid value of PYTHON: %s' % self.DCFG['PYTHON'], 'Error', wx.OK | wx.ICON_ERROR)
+            wx.Exit()
+
+        if self.DCFG['METHOD'] not in ('THREADING', 'PROCESS'):
+            wx.MessageBox('Invalid value of METHOD: %s' % self.DCFG['METHOD'], 'Error', wx.OK | wx.ICON_ERROR)
+            wx.Exit()
+
+        if self.DCFG['LANG'] not in ('CN', 'EN'):
+            wx.MessageBox('Invalid value of LANG: %s' % self.DCFG['PYTHON'], 'Error', wx.OK | wx.ICON_ERROR)
+            wx.Exit()
+
 
     def __cfg_autocomplete(self, cfg):
         for key in self.DCFG.keys():
@@ -152,7 +150,8 @@ class MyTaskBarIcon(wx.adv.TaskBarIcon):
             sys.stdout = self.log
         self.switch = False
         self.method = None
-        if self.cfg.get('AUTORUN'):
+        self.subprocess = None
+        if self.cfg.get('AUTORUN') is True:
             self.onOpen(None)
 
     def __set_icon(self, state):
@@ -169,34 +168,50 @@ class MyTaskBarIcon(wx.adv.TaskBarIcon):
     def onExit(self, event):
         if self.method_alive():
             if self.cfg.get('METHOD') == 'THREADING':
-                stop_thread(self.method)
+                self.subprocess.terminate()
                 self.method.join()
-            elif self.cfg.get('METHOD') == 'PROCESS':
+            else:
                 if win32event.WaitForSingleObject(self.method[0],0) != 0:
                     win32process.TerminateProcess(self.method[0], 0)
                     win32event.WaitForSingleObject(self.method[0],-1)
-                    stop_thread(self.sub_thread)
+                    #stop_thread(self.sub_thread)
                     self.sub_thread.join()
-            else:
-                wx.MessageBox('"METHOD" can not be %s' % self.cfg.get('METHOD'), self.DICT['Error'], wx.OK | wx.ICON_ERROR)
         wx.Exit()
 
     def __method2exec(self, method):
         if method == 'THREADING':
-            with open(self.cfg.get('SOFTWARE'), 'rb') as f:
-                self.method = threading.Thread(target=pyexec,
-                                               args=(f.read().decode('utf-8'), self.__set_icon,
-                                                     'SICON',
-                                                     self.DICT['Error']))
-                self.method.start()
-        elif method == 'PROCESS':
+            self.method = threading.Thread(target=self.pyexec)
+            self.method.start()
+        else:
             self.method = win32process.CreateProcess(self.cfg.get('SOFTWARE'), '',
                                                      None, None, 0, win32process.CREATE_NO_WINDOW,
                                                      None, None, win32process.STARTUPINFO())
             self.sub_thread = threading.Thread(target=self.__wait_process)
             self.sub_thread.start()
-        else:
-            raise ValueError('"METHOD" can not be %s' % method)
+
+    def pyexec(self):
+        try:
+            cmd = shlex.split('"%s" -u "%s"' % (self.cfg.get('PYTHON'), self.cfg.get('SOFTWARE')))
+            if os.name == 'nt':
+                shell = False
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+            else:
+                shell = True
+                startupinfo = None
+            self.subprocess = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, startupinfo=startupinfo)
+            while True:
+                if self.subprocess.poll() is not None:
+                    break
+                _line = self.subprocess.stdout.readline()
+                if _line:
+                    sys.stdout.write(_line)
+        except Exception as e:
+            wx.MessageBox(str(e), self.DICT['Error'], wx.OK | wx.ICON_ERROR)
+            with open(ErrLogFile, 'w') as f:
+                f.write(traceback.format_exc())
+        self.__set_icon('SICON')
 
     def __wait_process(self):
         win32event.WaitForSingleObject(self.method[0], -1)
@@ -220,7 +235,7 @@ class MyTaskBarIcon(wx.adv.TaskBarIcon):
     def onClose(self, event):
         if self.cfg.get('METHOD') == 'THREADING':
             if self.method_alive():
-                stop_thread(self.method)
+                self.subprocess.terminate()
                 self.method.join()
         else:
             if win32event.WaitForSingleObject(self.method[0],0) != 0:
@@ -236,11 +251,9 @@ class MyTaskBarIcon(wx.adv.TaskBarIcon):
             if self.cfg.get('METHOD') == 'THREADING':
                 if self.method.is_alive():
                     return True
-            elif self.cfg.get('METHOD') == 'PROCESS':
+            else:
                 if win32event.WaitForSingleObject(self.method[0],0) != 0:
                     return True
-            else:
-                wx.MessageBox('"METHOD" can not be %s' % self.cfg.get('METHOD'), self.DICT['Error'], wx.OK | wx.ICON_ERROR)
         return False
 
     def CreatePopupMenu(self):
@@ -289,25 +302,15 @@ class LogFrame(wx.Frame):
 
 
 class AboutFrame(wx.Dialog):
-    ABOUT = '''
-<html>
-<body>
-%s
-</body>
-</html>'''
+    ABOUT = '<html><body>%s</body></html>'
 
     def __init__(self, parent, title, about):
-        if isinstance(about, str):
-            wx.Dialog.__init__(self, parent, -1, title, size=ABOUT_SIZE)
-            t = self.ABOUT % about
-        elif isinstance(about, list):
-            try:
-                wx.Dialog.__init__(self, parent, -1, title, size=tuple(about[0]))
-                t = self.ABOUT % about[1]
-            except Exception as e:
-                wx.MessageBox(str(e), 'ConfigError', wx.OK | wx.ICON_ERROR)
-        else:
+        try:
+            wx.Dialog.__init__(self, parent, -1, title, size=tuple(about['SIZE']))
+            t = self.ABOUT % about['HTML']
+        except Exception as e:
             wx.MessageBox(str(e), 'ConfigError', wx.OK | wx.ICON_ERROR)
+            wx.Exit()
         self.html = wx.html.HtmlWindow(self)
         
         self.html.SetPage(t)

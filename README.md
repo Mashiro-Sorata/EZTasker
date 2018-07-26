@@ -51,14 +51,27 @@ Here are configuration items in program:
 * "LOGFILE": The path of log file, same as the log frame
 * "LANG": Language, "CN"-chinese, "EN"-English
 
+News in _v1.1.0-beta_
+* PYTHON: "python", "py" if python was added in PATH, or the path of "python.exe"
+
 The default icons:<br/>
 <div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/SICON.jpg?raw=true"><br/>Static state</div>
 <div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/DICON.jpg?raw=true"><br/>Dynamic state</div>
 
 <h2 id="u3">Download</h2>
 
+#### v1.1.0-Beta
+##### News:
+* The scripts that create threads is supported.
+* Json check function.
+
+[EZTasker-beta1.1.0.zip](https://github.com/Mashiro-Sorata/EZTasker/releases/download/v1.1.0-beta/EZTasker-beta1.1.0.zip)
+
 #### v1.0.0-Beta
+This version does not support scripts that create threads.
+
 [EZTasker-beta1.0.0.zip](https://github.com/Mashiro-Sorata/EZTasker/releases/download/v1.0.0-beta/EZTasker-beta1.0.1.zip)
+
 
 <h2 id="u4">License</h2>
 
