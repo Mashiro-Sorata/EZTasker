@@ -183,9 +183,9 @@ class MyTaskBarIcon(wx.adv.TaskBarIcon):
 
     def __method2exec(self, method):
         if method == 'THREADING':
-            with open(self.cfg.get('SOFTWARE'), 'rt') as f:
+            with open(self.cfg.get('SOFTWARE'), 'rb') as f:
                 self.method = threading.Thread(target=pyexec,
-                                               args=(f.read(), self.__set_icon,
+                                               args=(f.read().decode('utf-8'), self.__set_icon,
                                                      'SICON',
                                                      self.DICT['Error']))
                 self.method.start()

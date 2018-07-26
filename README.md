@@ -58,7 +58,7 @@ The default icons:<br/>
 <h2 id="u3">Download</h2>
 
 #### v1.0.0-Beta
-[EZTasker-beta1.0.0.zip](https://github.com/Mashiro-Sorata/EZTasker/releases/download/v1.0.0-beta/EZTasker-beta1.0.0.zip)
+[EZTasker-beta1.0.0.zip](https://github.com/Mashiro-Sorata/EZTasker/releases/download/v1.0.0-beta/EZTasker-beta1.0.1.zip)
 
 <h2 id="u4">License</h2>
 
