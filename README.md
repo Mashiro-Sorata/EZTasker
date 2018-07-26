@@ -53,7 +53,7 @@ Here are configuration items in program:
 
 The default icons:<br/>
 <div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/SICON.jpg?raw=true"><br/>Static state</div>
-<div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/DICON.jpg?raw=true"><br/>Dynamic state<div>
+<div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/DICON.jpg?raw=true"><br/>Dynamic state</div>
 
 <h2 id="u3">Download</h2>
 
