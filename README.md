@@ -39,6 +39,12 @@ It is a good choice for controlling scripts that do not need Windows. The script
 <h2 id="u2">Details</h2>
 
 The program automatically creates configuration _folder_("/config") and _file_("/config/configuration.json") for the first run time. <br/>Configure the program by editing the configuration file.<br/><br/>
+
+#### Notice
+_stdin cannot be used in scripts!_
+
+#### Config-Items
+
 Here are configuration items in program:
 * "TITLE": The text displayed on the icon
 * "SICON": The path of "static" state icon
@@ -53,6 +59,8 @@ Here are configuration items in program:
 
 News in _v1.1.0-beta_
 * PYTHON: "python", "py" if python was added in PATH, or the path of "python.exe"
+
+#### Icons
 
 The default icons:<br/>
 <div align="center"><img src="https://github.com/Mashiro-Sorata/EZTasker/blob/master/icons/SICON.jpg?raw=true"><br/>Static state</div>
